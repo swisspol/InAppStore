@@ -62,9 +62,10 @@ static BOOL _CheckNetwork() {
 
 + (InAppStore*)sharedStore {
   static InAppStore* store = nil;
-  if (store == nil) {
+  static dispatch_once_t token = 0;
+  dispatch_once(&token, ^{
     store = [[InAppStore alloc] init];
-  }
+  });
   return store;
 }
 
