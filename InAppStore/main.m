@@ -242,7 +242,7 @@ inline static CFDateRef _CopyDateFromASN1Data(SecAsn1CoderRef decoder, const ASN
     ABORT("Failed decoding receipt field: decode date");
   }
   CFStringRef string = CFStringCreateWithBytes(kCFAllocatorDefault, data.data, data.length, kCFStringEncodingASCII, false);
-  CFLocaleRef locale = CFLocaleCreate(kCFAllocatorDefault, CFSTR("en-US"));
+  CFLocaleRef locale = CFLocaleCreate(kCFAllocatorDefault, CFSTR("en_US"));
   CFDateFormatterRef formatter = CFDateFormatterCreate(kCFAllocatorDefault, locale, kCFDateFormatterNoStyle, kCFDateFormatterNoStyle);
   CFDateFormatterSetFormat(formatter, CFSTR("yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"));
   CFDateRef date = CFDateFormatterCreateDateFromString(kCFAllocatorDefault, formatter, string, NULL);
