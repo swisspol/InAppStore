@@ -35,7 +35,7 @@
 #import <Security/SecAsn1Coder.h>
 #import <Security/SecAsn1Templates.h>
 #import <Security/SecRequirement.h>
-#import <IOKit/IOKitLib.h>
+#import <IOKit/network/IOEthernetController.h>
 
 #define ABORT(__MESSAGE__) \
   do { \
@@ -195,17 +195,17 @@ inline static CFDataRef _CopyMACAddress() {
   if (IOMasterPort(MACH_PORT_NULL, &masterPort) == KERN_SUCCESS) {
     CFMutableDictionaryRef matchingDict = IOBSDNameMatching(masterPort, 0, "en0");
     io_iterator_t iterator;
-    if (IOServiceGetMatchingServices(masterPort, matchingDict, &iterator) == KERN_SUCCESS) {
-      io_object_t aService;
-      while ((aService = IOIteratorNext(iterator)) != 0) {
+    if (IOServiceGetMatchingServices(masterPort, matchingDict, &iterator) == KERN_SUCCESS) {  // Consumes a reference to "matchingDict"
+      io_object_t service;
+      while ((service = IOIteratorNext(iterator)) != 0) {
         io_object_t parentService;
-        if (IORegistryEntryGetParentEntry(aService, kIOServicePlane, &parentService) == KERN_SUCCESS) {
+        if (IORegistryEntryGetParentEntry(service, kIOServicePlane, &parentService) == KERN_SUCCESS) {
           if (data == NULL) {
-            data = (CFDataRef)IORegistryEntryCreateCFProperty(parentService, (CFStringRef)@"IOMACAddress", kCFAllocatorDefault, 0);
+            data = (CFDataRef)IORegistryEntryCreateCFProperty(parentService, CFSTR(kIOMACAddress), kCFAllocatorDefault, 0);
           }
           IOObjectRelease(parentService);
         }
-        IOObjectRelease(aService);
+        IOObjectRelease(service);
       }
       IOObjectRelease(iterator);
     }
