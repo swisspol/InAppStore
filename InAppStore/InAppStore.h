@@ -31,23 +31,25 @@
 
 @protocol InAppStoreDelegate <NSObject>
 @optional
-- (void)inAppStoreWillBecomeBusy:(InAppStore*)store;
-
+- (void)inAppStoreWillStartPurchasing:(InAppStore*)store;
 - (void)inAppStoreDidCancelPurchase:(InAppStore*)store;
+- (void)inAppStore:(InAppStore*)store didFindProductWithIdentifier:(NSString*)identifier price:(NSDecimalNumber*)price currencyLocale:(NSLocale*)locale;
 - (void)inAppStore:(InAppStore*)store didFailFindingProductWithIdentifier:(NSString*)identifier;
 - (void)inAppStore:(InAppStore*)store didFailPurchasingProductWithIdentifier:(NSString*)identifier error:(NSError*)error;
-- (void)inAppStore:(InAppStore*)store didPurchaseProductWithIdentifier:(NSString*)identifier;
+- (void)inAppStore:(InAppStore*)store didPurchaseProductWithIdentifier:(NSString*)identifier;  // Can be called while not purchasing if finishing an interrupted purchase
+- (void)inAppStoreDidEndPurchasing:(InAppStore*)store;
 
+- (void)inAppStoreWillStartRestoring:(InAppStore*)store;
 - (void)inAppStoreDidCancelRestore:(InAppStore*)store;
 - (void)inAppStore:(InAppStore*)store didFailRestoreWithError:(NSError*)error;
-- (void)inAppStore:(InAppStore*)store didRestoreProductWithIdentifier:(NSString*)identifier;
-
-- (void)inAppStoreDidBecomeIdle:(InAppStore*)store;
+- (void)inAppStore:(InAppStore*)store didRestoreProductWithIdentifier:(NSString*)identifier;  // Can be called while not restoring if finishing an interrupted restore
+- (void)inAppStoreDidEndRestoring:(InAppStore*)store;
 @end
 
 @interface InAppStore : NSObject
 @property(nonatomic, assign) id<InAppStoreDelegate> delegate;
-@property(nonatomic, getter = isBusy) BOOL busy;
+@property(nonatomic, getter = isPurchasing) BOOL purchasing;
+@property(nonatomic, getter = isRestoring) BOOL restoring;
 + (InAppStore*)sharedStore;
 - (BOOL)hasPurchasedProductWithIdentifier:(NSString*)identifier;
 - (BOOL)purchaseProductWithIdentifier:(NSString*)identifier;  // Returns NO if no internet connection or purchases not allowed

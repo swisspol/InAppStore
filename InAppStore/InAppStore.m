@@ -80,22 +80,36 @@ static BOOL _CheckNetwork() {
   return CFSetContainsValue(InAppPurchaseProductIdentifiers, (__bridge void*)identifier);
 }
 
-- (void)_start {
-  if ([_delegate respondsToSelector:@selector(inAppStoreWillBecomeBusy:)]) {
-    [_delegate inAppStoreWillBecomeBusy:self];
+- (void)_startPurchasing {
+  if ([_delegate respondsToSelector:@selector(inAppStoreWillStartPurchasing:)]) {
+    [_delegate inAppStoreWillStartPurchasing:self];
   }
-  _busy = YES;
+  _purchasing = YES;
 }
 
-- (void)_end {
-  _busy = NO;
-  if ([_delegate respondsToSelector:@selector(inAppStoreDidBecomeIdle:)]) {
-    [_delegate inAppStoreDidBecomeIdle:self];
+- (void)_endPurchasing {
+  _purchasing = NO;
+  if ([_delegate respondsToSelector:@selector(inAppStoreDidEndPurchasing:)]) {
+    [_delegate inAppStoreDidEndPurchasing:self];
+  }
+}
+
+- (void)_startRestoring {
+  if ([_delegate respondsToSelector:@selector(inAppStoreWillStartRestoring:)]) {
+    [_delegate inAppStoreWillStartRestoring:self];
+  }
+  _restoring = YES;
+}
+
+- (void)_endRestoring {
+  _restoring = NO;
+  if ([_delegate respondsToSelector:@selector(inAppStoreDidEndRestoring:)]) {
+    [_delegate inAppStoreDidEndRestoring:self];
   }
 }
 
 - (BOOL)purchaseProductWithIdentifier:(NSString*)identifier {
-  if (_busy || !_CheckNetwork() || ![SKPaymentQueue canMakePayments]) {
+  if (_purchasing || !_CheckNetwork() || ![SKPaymentQueue canMakePayments]) {
     return NO;
   }
   LOG(@"[App Store] Product request started");
@@ -103,24 +117,29 @@ static BOOL _CheckNetwork() {
   SKProductsRequest* request = [[SKProductsRequest alloc] initWithProductIdentifiers:[NSSet setWithObject:identifier]];
   request.delegate = self;
   [request start];
-  [self _start];
+  [self _startPurchasing];
   return YES;
 }
 
 - (BOOL)restorePurchases {
-  if (_busy || !_CheckNetwork()) {
+  if (_restoring || !_CheckNetwork()) {
     return NO;
   }
   LOG(@"[App Store] Restore started");
   [[SKPaymentQueue defaultQueue] restoreCompletedTransactions];
-  [self _start];
+  [self _startRestoring];
   return YES;
 }
 
 - (void)productsRequest:(SKProductsRequest*)request didReceiveResponse:(SKProductsResponse*)response {
   SKProduct* product = [response.products firstObject];
   if (product) {
-    LOG(@"[App Store] Product found: %@", product.productIdentifier);
+    LOG(@"[App Store] Product found: %@ (%@%@)", product.productIdentifier, [product.priceLocale objectForKey:NSLocaleCurrencySymbol], product.price);
+    dispatch_async(dispatch_get_main_queue(), ^{
+      if ([_delegate respondsToSelector:@selector(inAppStore:didFindProductWithIdentifier:price:currencyLocale:)]) {
+        [_delegate inAppStore:self didFindProductWithIdentifier:product.productIdentifier price:product.price currencyLocale:product.priceLocale];
+      }
+    });
     SKPayment* payment = [SKPayment paymentWithProduct:product];
     [[SKPaymentQueue defaultQueue] addPayment:payment];
   } else {
@@ -130,7 +149,7 @@ static BOOL _CheckNetwork() {
       if ([_delegate respondsToSelector:@selector(inAppStore:didFailFindingProductWithIdentifier:)]) {
         [_delegate inAppStore:self didFailFindingProductWithIdentifier:productIdentifier];
       }
-      [self _end];
+      [self _endPurchasing];
     });
   }
 }
@@ -148,7 +167,7 @@ static BOOL _CheckNetwork() {
     if ([_delegate respondsToSelector:@selector(inAppStore:didFailPurchasingProductWithIdentifier:error:)]) {
       [_delegate inAppStore:self didFailPurchasingProductWithIdentifier:productIdentifier error:error];
     }
-    [self _end];
+    [self _endPurchasing];
   });
   _productIdentifier = nil;
 }
@@ -166,16 +185,14 @@ static BOOL _CheckNetwork() {
       case SKPaymentTransactionStatePurchased: {
         LOG(@"[App Store] Purchase completed for product '%@'", transaction.payment.productIdentifier);
         CFSetSetValue(InAppPurchaseProductIdentifiers, (__bridge void*)productIdentifier);
-        if (_busy) {
-          dispatch_async(dispatch_get_main_queue(), ^{
-            if ([_delegate respondsToSelector:@selector(inAppStore:didPurchaseProductWithIdentifier:)]) {
-              [_delegate inAppStore:self didPurchaseProductWithIdentifier:productIdentifier];
-            }
-            [self _end];
-          });
-        } else {
-          // TODO: Handle stale transactions reconciled at launch
-        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+          if ([_delegate respondsToSelector:@selector(inAppStore:didPurchaseProductWithIdentifier:)]) {
+            [_delegate inAppStore:self didPurchaseProductWithIdentifier:productIdentifier];
+          }
+          if (_purchasing) {
+            [self _endPurchasing];
+          }
+        });
         [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
         break;
       }
@@ -183,15 +200,11 @@ static BOOL _CheckNetwork() {
       case SKPaymentTransactionStateRestored: {
         LOG(@"[App Store] Purchase restored for product '%@'", transaction.payment.productIdentifier);
         CFSetSetValue(InAppPurchaseProductIdentifiers, (__bridge void*)productIdentifier);
-        if (_busy) {
-          dispatch_async(dispatch_get_main_queue(), ^{
-            if ([_delegate respondsToSelector:@selector(inAppStore:didRestoreProductWithIdentifier:)]) {
-              [_delegate inAppStore:self didRestoreProductWithIdentifier:productIdentifier];
-            }
-          });
-        } else {
-          // TODO: Handle stale transactions reconciled at launch
-        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+          if ([_delegate respondsToSelector:@selector(inAppStore:didRestoreProductWithIdentifier:)]) {
+            [_delegate inAppStore:self didRestoreProductWithIdentifier:productIdentifier];
+          }
+        });
         [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
         break;
       }
@@ -209,7 +222,9 @@ static BOOL _CheckNetwork() {
               [_delegate inAppStore:self didFailPurchasingProductWithIdentifier:productIdentifier error:error];
             }
           }
-          [self _end];
+          if (_purchasing) {
+            [self _endPurchasing];
+          }
         });
         [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
         break;
@@ -231,14 +246,14 @@ static BOOL _CheckNetwork() {
         [_delegate inAppStore:self didFailRestoreWithError:error];
       }
     }
-    [self _end];
+    [self _endRestoring];
   });
 }
 
 - (void)paymentQueueRestoreCompletedTransactionsFinished:(SKPaymentQueue*)queue {
   LOG(@"[App Store] Restore completed");
   dispatch_async(dispatch_get_main_queue(), ^{
-    [self _end];
+    [self _endRestoring];
   });
 }
 
