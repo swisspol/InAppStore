@@ -359,9 +359,11 @@ inline static void _CheckReceiptPayload() {
   if (!bundleID || !CFEqual(bundleID, CFSTR(__BUNDLE_ID__))) {
     ABORT("Failed validating app receipt: check bundle ID");
   }
+#ifdef NDEBUG
   if (!bundleVersion || !CFEqual(bundleVersion, CFSTR(__BUNDLE_VERSION__))) {
     ABORT("Failed validating app receipt: check bundle version");
   }
+#endif
   if (bundleData && opaqueValue && sha1Hash && (CFDataGetLength(sha1Hash) == CC_SHA1_DIGEST_LENGTH)) {
     CFDataRef macAddress = _CopyMACAddress();
     CFMutableDataRef digestData = CFDataCreateMutable(kCFAllocatorDefault, 0);
