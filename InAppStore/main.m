@@ -41,7 +41,7 @@
   do { \
     fprintf(stderr, __MESSAGE__ "\n"); \
     exit(173); \
-  } while(1)
+  } while(0)
 
 // See https://developer.apple.com/library/mac/releasenotes/General/ValidateAppStoreReceipt/Chapters/ReceiptFields.html
 enum {
