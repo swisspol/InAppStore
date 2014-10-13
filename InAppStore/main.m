@@ -297,7 +297,7 @@ inline static void _CheckInAppPurchasePayload(CFDataRef receiptData) {
   }
   if (!cancellationDate) {
     CFSetAddValue(InAppPurchaseProductIdentifiers, productID);
-#ifndef NDEBUG
+#if DEBUG
     char buffer[512];
     CFStringGetCString(productID, buffer, sizeof(buffer), kCFStringEncodingUTF8);
     fprintf(stdout, "Found in-app purchase receipt for product '%s'\n", buffer);
@@ -359,7 +359,7 @@ inline static void _CheckReceiptPayload() {
   if (!bundleID || !CFEqual(bundleID, CFSTR(__BUNDLE_ID__))) {
     ABORT("Failed validating app receipt: check bundle ID");
   }
-#ifdef NDEBUG
+#if !DEBUG
   if (!bundleVersion || !CFEqual(bundleVersion, CFSTR(__BUNDLE_VERSION__))) {
     ABORT("Failed validating app receipt: check bundle version");
   }
@@ -394,7 +394,7 @@ int main(int argc, char *argv[]) {
   InAppPurchaseProductIdentifiers = CFSetCreateMutable(kCFAllocatorDefault, 0, &kCFCopyStringSetCallBacks);
   _CheckBundleIDAndVersion();
   _CheckBundleSignature();
-#ifdef NDEBUG
+#if !DEBUG
   _CheckReceiptPayload();
 #else
   fprintf(stderr, "<<< WARNING: APP STORE RECEIPT VALIDATION RUNNING IN DEBUG MODE >>>\n");

@@ -32,7 +32,7 @@
 
 #define kReachabilityHostName "www.apple.com"
 
-#ifdef NDEBUG
+#if !DEBUG
 #define LOG(...)
 #else
 #define LOG(...) NSLog(__VA_ARGS__)
