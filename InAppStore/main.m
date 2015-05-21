@@ -81,6 +81,8 @@ typedef struct {
 
 typedef int (*ApplicationMain)(int argc, const char* argv[]);
 
+extern CFMutableSetRef InAppPurchaseProductIdentifiers;
+
 CFMutableSetRef InAppPurchaseProductIdentifiers = NULL;
 
 static ApplicationMain _appMain = &NSApplicationMain;
@@ -222,7 +224,7 @@ inline static CFDataRef _CopyRawDataFromASN1Data(const ASN1_Data* asn1Data) {
 
 inline static int _GetIntValueFromASN1Data(const ASN1_Data* asn1Data) {
   int ret = 0;
-  for (int i = 0; i < asn1Data->length; i++) {
+  for (int i = 0; i < (int)asn1Data->length; i++) {
     ret = (ret << 8) | asn1Data->data[i];
   }
   return ret;
