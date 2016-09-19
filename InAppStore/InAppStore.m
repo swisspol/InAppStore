@@ -177,7 +177,10 @@ static BOOL _CheckNetwork() {
   for (SKPaymentTransaction* transaction in transactions) {
     NSString* productIdentifier = transaction.payment.productIdentifier;
     switch (transaction.transactionState) {
-      
+
+      case SKPaymentTransactionStateDeferred:
+        break;
+
       case SKPaymentTransactionStatePurchasing:
         LOG(@"[App Store] Purchase started for product '%@'", transaction.payment.productIdentifier);
         break;
