@@ -230,6 +230,7 @@ inline static int _GetIntValueFromASN1Data(const ASN1_Data* asn1Data) {
   return ret;
 }
 
+// Can return NULL
 inline static CFStringRef _CopyUTF8StringFromASN1Data(SecAsn1CoderRef decoder, const ASN1_Data* asn1Data) {
   ASN1_Data data;
   if (SecAsn1Decode(decoder, asn1Data->data, asn1Data->length, kSecAsn1UTF8StringTemplate, &data) != noErr) {
@@ -238,6 +239,7 @@ inline static CFStringRef _CopyUTF8StringFromASN1Data(SecAsn1CoderRef decoder, c
   return CFStringCreateWithBytes(kCFAllocatorDefault, data.data, data.length, kCFStringEncodingUTF8, false);
 }
 
+// Can return NULL
 inline static CFDateRef _CopyDateFromASN1Data(SecAsn1CoderRef decoder, const ASN1_Data* asn1Data) {
   ASN1_Data data;
   if (SecAsn1Decode(decoder, asn1Data->data, asn1Data->length, kSecAsn1IA5StringTemplate, &data) != noErr) {
@@ -248,9 +250,6 @@ inline static CFDateRef _CopyDateFromASN1Data(SecAsn1CoderRef decoder, const ASN
   CFDateFormatterRef formatter = CFDateFormatterCreate(kCFAllocatorDefault, locale, kCFDateFormatterNoStyle, kCFDateFormatterNoStyle);
   CFDateFormatterSetFormat(formatter, CFSTR("yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"));
   CFDateRef date = CFDateFormatterCreateDateFromString(kCFAllocatorDefault, formatter, string, NULL);
-  if (date == NULL) {
-    ABORT("Failed decoding receipt field: parse date");
-  }
   CFRelease(formatter);
   CFRelease(locale);
   CFRelease(string);
